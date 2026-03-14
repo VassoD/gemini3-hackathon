@@ -167,6 +167,14 @@
       text-align: center;
     }
 
+    #record-timer {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fa5050;
+      min-width: 48px;
+      text-align: center;
+    }
+
     #camera-status { color: var(--muted); font-size: 0.85rem; text-align: center; margin-top: 8px; }
 
     /* Primary button */
@@ -310,10 +318,11 @@
     <div class="panel" id="panel-camera">
       <video id="camera-preview" autoplay muted playsinline></video>
       <div class="camera-controls">
-        <button id="record-btn" disabled title="Record 8 seconds">
+        <button id="record-btn" disabled title="Tap to record">
           <div class="dot"></div>
         </button>
         <span id="countdown"></span>
+        <span id="record-timer"></span>
       </div>
       <p id="camera-status">Starting camera…</p>
     </div>
@@ -478,19 +487,19 @@
     // ── Camera tab ─────────────────────────────────────────────────────────────
     const cameraPreview = document.getElementById('camera-preview');
     const recordBtn     = document.getElementById('record-btn');
-    const countdownEl   = document.getElementById('countdown');
+    const recordTimer   = document.getElementById('record-timer');
     const cameraStatus  = document.getElementById('camera-status');
-    const RECORD_SECS   = 8;
 
     let mediaStream = null;
     let mediaRecorder = null;
+    let timerInterval = null;
 
     async function startCamera() {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         cameraPreview.srcObject = mediaStream;
         recordBtn.disabled = false;
-        cameraStatus.textContent = 'Point at a light source and hit record';
+        cameraStatus.textContent = 'Point at a light source — tap to record, tap again to stop';
       } catch (err) {
         cameraStatus.textContent = 'Camera not available: ' + err.message;
       }
@@ -501,7 +510,12 @@
     });
 
     recordBtn.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') return;
+      // Stop recording if in progress
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        clearInterval(timerInterval);
+        mediaRecorder.stop();
+        return;
+      }
 
       const chunks = [];
       const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
@@ -509,31 +523,30 @@
 
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType });
-        recordBtn.disabled = false;
+        // Stop camera stream
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
         recordBtn.classList.remove('recording');
+        recordBtn.disabled = true;
+        recordTimer.textContent = '';
         cameraStatus.textContent = 'Processing…';
-        runPipeline(blob, mimeType).then(() => {
-          cameraStatus.textContent = 'Point at a light source and hit record';
+        runPipeline(new Blob(chunks, { type: mimeType }), mimeType).then(() => {
+          // Restart camera for next recording
+          startCamera();
         });
       };
 
-      let remaining = RECORD_SECS;
-      countdownEl.textContent = remaining + 's';
-      recordBtn.classList.add('recording');
-      recordBtn.disabled = true;
-      cameraStatus.textContent = 'Recording…';
-
-      mediaRecorder.start();
-
-      const timer = setInterval(() => {
-        remaining--;
-        countdownEl.textContent = remaining > 0 ? remaining + 's' : '';
-        if (remaining <= 0) {
-          clearInterval(timer);
-          mediaRecorder.stop();
-        }
+      // Start live timer
+      let elapsed = 0;
+      recordTimer.textContent = '0s';
+      timerInterval = setInterval(() => {
+        elapsed++;
+        recordTimer.textContent = elapsed + 's';
       }, 1000);
+
+      recordBtn.classList.add('recording');
+      cameraStatus.textContent = 'Recording… tap to stop';
+      mediaRecorder.start();
     });
   </script>
 </body>
