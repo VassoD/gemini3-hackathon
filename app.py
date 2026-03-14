@@ -1,6 +1,8 @@
 """
 Lumen-Sonic — Gemini 3 Paris Hackathon 2026
-POST /process  →  upload 10s light video  →  jardin_vibe.wav
+GET  /           → UI
+POST /analyze    → upload video, return music prompt JSON
+POST /generate   → take prompt, return WAV binary
 """
 
 import asyncio
@@ -21,14 +23,14 @@ from google.genai import types
 
 app = Flask(__name__)
 
-OUTPUT_DIR = pathlib.Path(".")
+OUTPUT_DIR = pathlib.Path("music")
+OUTPUT_DIR.mkdir(exist_ok=True)
 VISION_MODEL = "gemini-3-flash-preview"
 MUSIC_MODEL = "models/lyria-realtime-exp"
 MUSIC_DURATION = 30  # seconds
 
 _api_key = os.environ["GEMINI_API_KEY"]
 client = genai.Client(api_key=_api_key)
-# Lyria's BidiGenerateMusic WebSocket lives on v1alpha, not v1beta
 music_client = genai.Client(
     api_key=_api_key,
     http_options=types.HttpOptions(api_version="v1alpha"),
@@ -51,7 +53,10 @@ Return ONLY the music generation prompt, no preamble, no bullet points.
 
 def upload_video(file_storage) -> genai.types.File:
     """Write the incoming file to a temp path and upload via Files API."""
-    suffix = pathlib.Path(file_storage.filename or "clip.mp4").suffix or ".mp4"
+    filename = file_storage.filename or "clip.webm"
+    suffix = pathlib.Path(filename).suffix or ".webm"
+    mime = "video/mp4" if suffix == ".mp4" else "video/webm"
+
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         file_storage.save(tmp.name)
         tmp_path = tmp.name
@@ -59,9 +64,8 @@ def upload_video(file_storage) -> genai.types.File:
     try:
         uploaded = client.files.upload(
             file=tmp_path,
-            config=types.UploadFileConfig(mime_type="video/mp4"),
+            config=types.UploadFileConfig(mime_type=mime),
         )
-        # Poll until the file is fully processed
         for _ in range(30):
             file_info = client.files.get(name=uploaded.name)
             if file_info.state == types.FileState.ACTIVE:
@@ -75,11 +79,11 @@ def upload_video(file_storage) -> genai.types.File:
 
 
 def analyze_light(video_file: genai.types.File) -> str:
-    """Step 1 — Gemini vision: light → music description."""
+    """Gemini vision: light → music description."""
     response = client.models.generate_content(
         model=VISION_MODEL,
         contents=[
-            types.Part.from_uri(file_uri=video_file.uri, mime_type="video/mp4"),
+            types.Part.from_uri(file_uri=video_file.uri, mime_type=video_file.mime_type),
             VISION_PROMPT,
         ],
     )
@@ -108,25 +112,18 @@ async def _generate_music_async(music_prompt: str, duration: int) -> bytes:
 
     if not audio_parts:
         raise RuntimeError("Lyria returned no audio chunks")
-    raw_pcm = b"".join(audio_parts)
 
-    # Wrap raw PCM in a WAV container (Lyria: 16-bit stereo, 48 kHz)
+    raw_pcm = b"".join(audio_parts)
     buf = io.BytesIO()
     with wave.open(buf, "wb") as wf:
-        wf.setnchannels(2)       # stereo
-        wf.setsampwidth(2)       # 16-bit
-        wf.setframerate(48000)   # 48 kHz
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(48000)
         wf.writeframes(raw_pcm)
     return buf.getvalue()
 
 
-def generate_music(music_prompt: str) -> bytes:
-    """Step 2 — Lyria: music description → audio bytes (sync wrapper)."""
-    return asyncio.run(_generate_music_async(music_prompt, MUSIC_DURATION))
-
-
 def make_filename(music_prompt: str) -> pathlib.Path:
-    """Ask the model for a short evocative name, then append a datetime stamp."""
     resp = client.models.generate_content(
         model=VISION_MODEL,
         contents=(
@@ -141,51 +138,53 @@ def make_filename(music_prompt: str) -> pathlib.Path:
     return OUTPUT_DIR / f"{slug}_{stamp}.wav"
 
 
+# ── Routes ────────────────────────────────────────────────────────────────────
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-@app.route("/process", methods=["POST"])
-def process():
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    """Step 1: upload video → return music prompt."""
     if "video" not in request.files:
-        return jsonify(error="No video file provided (field name: 'video')"), 400
-
-    video_file_storage = request.files["video"]
-
+        return jsonify(error="No video file (field: 'video')"), 400
     try:
-        # 1. Upload video to Files API
         app.logger.info("Uploading video …")
-        video_file = upload_video(video_file_storage)
+        video_file = upload_video(request.files["video"])
+        app.logger.info("Analyzing light …")
+        prompt = analyze_light(video_file)
+        app.logger.info("Prompt: %s", prompt)
+        return jsonify(prompt=prompt)
+    except Exception as exc:
+        app.logger.exception("Analyze error")
+        return jsonify(error=str(exc)), 500
 
-        # 2. Vision analysis
-        app.logger.info("Analyzing light with %s …", VISION_MODEL)
-        music_prompt = analyze_light(video_file)
-        app.logger.info("Music prompt: %s", music_prompt)
 
-        # 3. Music generation
-        app.logger.info("Generating %ds track with %s …", MUSIC_DURATION, MUSIC_MODEL)
-        audio_bytes = generate_music(music_prompt)
-
-        # 4. Save output + stream back to browser
-        output_path = make_filename(music_prompt)
+@app.route("/generate", methods=["POST"])
+def generate():
+    """Step 2: music prompt → WAV binary."""
+    data = request.get_json(force=True)
+    prompt = (data or {}).get("prompt", "").strip()
+    if not prompt:
+        return jsonify(error="Missing 'prompt' field"), 400
+    try:
+        app.logger.info("Generating %ds track …", MUSIC_DURATION)
+        audio_bytes = asyncio.run(_generate_music_async(prompt, MUSIC_DURATION))
+        output_path = make_filename(prompt)
         output_path.write_bytes(audio_bytes)
         app.logger.info("Saved → %s (%d bytes)", output_path, len(audio_bytes))
-
         headers = {
             "Content-Disposition": f'attachment; filename="{output_path.name}"',
-            "X-Music-Prompt": quote(music_prompt),
+            "X-Music-Prompt": quote(prompt),
             "X-Output-File": output_path.name,
         }
         return Response(audio_bytes, mimetype="audio/wav", headers=headers)
-
-    except (RuntimeError, TimeoutError) as exc:
-        app.logger.error("Processing error: %s", exc)
-        return jsonify(error=str(exc)), 500
-    except Exception as exc:  # noqa: BLE001
-        app.logger.exception("Unexpected error")
+    except Exception as exc:
+        app.logger.exception("Generate error")
         return jsonify(error=str(exc)), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)
