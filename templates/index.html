@@ -122,8 +122,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 16px;
       margin-top: 16px;
+      position: relative;
+    }
+
+    #countdown, #record-timer {
+      position: absolute;
+      left: calc(50% + 40px);
     }
 
     #record-btn {
@@ -325,6 +330,7 @@
         <span id="countdown"></span>
         <span id="record-timer"></span>
       </div>
+      <button class="primary-btn" id="record-again-btn" style="display:none;">🎬 Record Again</button>
       <p id="camera-status">Starting camera…</p>
     </div>
 
@@ -486,11 +492,12 @@
     });
 
     // ── Camera tab ─────────────────────────────────────────────────────────────
-    const cameraPreview = document.getElementById('camera-preview');
-    const clipPreview   = document.getElementById('clip-preview');
-    const recordBtn     = document.getElementById('record-btn');
-    const recordTimer   = document.getElementById('record-timer');
-    const cameraStatus  = document.getElementById('camera-status');
+    const cameraPreview   = document.getElementById('camera-preview');
+    const clipPreview     = document.getElementById('clip-preview');
+    const recordBtn       = document.getElementById('record-btn');
+    const recordAgainBtn  = document.getElementById('record-again-btn');
+    const recordTimer     = document.getElementById('record-timer');
+    const cameraStatus    = document.getElementById('camera-status');
 
     let mediaStream = null;
     let mediaRecorder = null;
@@ -540,10 +547,8 @@
         cameraStatus.textContent = 'Processing…';
 
         runPipeline(blob, mimeType).then(() => {
-          // Hide clip, restart camera for next recording
-          clipPreview.style.display = 'none';
-          cameraPreview.style.display = 'block';
-          startCamera();
+          cameraStatus.textContent = 'Done! Watch your clip or record again.';
+          recordAgainBtn.style.display = 'block';
         });
       };
 
@@ -558,6 +563,14 @@
       recordBtn.classList.add('recording');
       cameraStatus.textContent = 'Recording… tap to stop';
       mediaRecorder.start();
+    });
+
+    recordAgainBtn.addEventListener('click', () => {
+      recordAgainBtn.style.display = 'none';
+      clipPreview.style.display = 'none';
+      cameraPreview.style.display = 'block';
+      resetResults();
+      startCamera();
     });
   </script>
 </body>
