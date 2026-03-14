@@ -40,13 +40,15 @@ Tested live on a **Google Pixel 10** via mobile browser (no app install required
 
 ## How it works
 
-1. Upload a video or record live via the camera tab (8 seconds)
-2. Gemini Vision analyzes the light — color temperature, flicker rate, brightness arc — and writes a music prompt
-3. The prompt is shown immediately in the UI (while music is still generating)
-4. Lyria generates a 30-second audio track from that prompt
-5. The track plays in the browser and can be downloaded as WAV
+1. Upload a video or record live via the camera tab
+2. After recording stops, the clip stays visible so you can review it before anything else happens
+3. Gemini Vision analyzes the light — color temperature, flicker rate, brightness arc — and writes a music prompt
+4. The prompt is shown immediately in the UI (while music is still generating)
+5. Lyria generates a 30-second audio track from that prompt
+6. The track plays in the browser and can be downloaded as WAV
+7. The clip remains on screen alongside the result — tap **Record Again** when you're ready to start fresh
 
-The pipeline is split into two steps (`/analyze` then `/generate`) so the user sees the music description appear mid-process — no blank waiting screen.
+The pipeline is split into two steps (`/analyze` then `/generate`) so the user sees the music description appear mid-process — no blank waiting screen. The camera only restarts when the user explicitly asks for it, so the recorded moment is never lost.
 
 ---
 
