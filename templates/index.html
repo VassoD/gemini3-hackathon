@@ -507,6 +507,7 @@
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
         cameraPreview.srcObject = mediaStream;
+        recordBtn.style.display = '';
         recordBtn.disabled = false;
         cameraStatus.textContent = 'Point at a light source — tap to record, tap again to stop';
       } catch (err) {
@@ -537,6 +538,7 @@
         mediaStream = null;
         recordBtn.classList.remove('recording');
         recordBtn.disabled = true;
+        recordBtn.style.display = 'none';
         recordTimer.textContent = '';
 
         // Show clip playback
