@@ -317,6 +317,7 @@
     <!-- Camera panel -->
     <div class="panel" id="panel-camera">
       <video id="camera-preview" autoplay muted playsinline></video>
+      <video id="clip-preview" controls playsinline style="display:none;width:100%;border-radius:12px;margin-top:12px;"></video>
       <div class="camera-controls">
         <button id="record-btn" disabled title="Tap to record">
           <div class="dot"></div>
@@ -486,6 +487,7 @@
 
     // ── Camera tab ─────────────────────────────────────────────────────────────
     const cameraPreview = document.getElementById('camera-preview');
+    const clipPreview   = document.getElementById('clip-preview');
     const recordBtn     = document.getElementById('record-btn');
     const recordTimer   = document.getElementById('record-timer');
     const cameraStatus  = document.getElementById('camera-status');
@@ -529,9 +531,18 @@
         recordBtn.classList.remove('recording');
         recordBtn.disabled = true;
         recordTimer.textContent = '';
+
+        // Show clip playback
+        const blob = new Blob(chunks, { type: mimeType });
+        clipPreview.src = URL.createObjectURL(blob);
+        clipPreview.style.display = 'block';
+        cameraPreview.style.display = 'none';
         cameraStatus.textContent = 'Processing…';
-        runPipeline(new Blob(chunks, { type: mimeType }), mimeType).then(() => {
-          // Restart camera for next recording
+
+        runPipeline(blob, mimeType).then(() => {
+          // Hide clip, restart camera for next recording
+          clipPreview.style.display = 'none';
+          cameraPreview.style.display = 'block';
           startCamera();
         });
       };
