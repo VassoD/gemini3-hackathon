@@ -132,3 +132,27 @@ Any phone works — Android, iPhone, any modern browser. No app install needed.
 ## Output
 
 Generated tracks are saved to the `music/` folder (git-ignored).
+
+---
+
+## Future Possibilities
+
+Everything below is achievable with the tools already in the stack (Gemini Vision + Lyria + FFmpeg).
+
+**Video + audio merge**
+Mux the recorded clip (looped to 30s) with the generated track using FFmpeg — one command — and offer a single downloadable video file ready to share on Reels or TikTok.
+
+**Real-time light-to-music streaming**
+Instead of recording a clip, send frames continuously to Gemini Vision and regenerate or extend the track on the fly. The music evolves as the light changes.
+
+**Multi-source comparison**
+Record the same light source from two different phones and generate both tracks side by side, making the "your device is your instrument" idea tangible and demonstrable.
+
+**Prompt history / gallery**
+Store generated prompts and audio URLs in a lightweight database and surface a public gallery — a feed of light moments turned into music by different people around the world.
+
+**Lyria parameter exposure**
+Gemini Vision already infers BPM, key, and instrumentation. These could be surfaced as editable sliders before generation, letting the user nudge the music while keeping the light as the creative seed.
+
+**Timelapse mode**
+Sample one frame per second from a longer video (a sunrise, a candle burning down) and stitch together a track whose mood arc mirrors the changing light over time.
