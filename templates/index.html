@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumen-Sonic</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --border: #2a2a3a;
+      --accent: #7c6dfa;
+      --accent2: #f0a040;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: rgba(124, 109, 250, 0.06);
+    }
+
+    #drop-zone.has-file {
+      border-color: var(--accent2);
+      background: rgba(240, 160, 64, 0.06);
+    }
+
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .drop-label {
+      font-size: 1rem;
+      color: var(--muted);
+    }
+
+    .drop-label strong {
+      color: var(--text);
+    }
+
+    #file-name {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: var(--accent2);
+      min-height: 20px;
+    }
+
+    /* Button */
+    #submit-btn {
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), #5a4de0);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    #submit-btn:hover:not(:disabled) { opacity: 0.9; }
+    #submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    #submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Status steps */
+    #status-section {
+      display: none;
+      margin-top: 32px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      transition: color 0.3s;
+    }
+
+    .step.active { color: var(--text); }
+    .step.done   { color: #6be0a0; }
+
+    .step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .step.active .step-icon {
+      border-color: var(--accent);
+      color: var(--accent);
+      animation: pulse-ring 1.2s infinite;
+    }
+
+    .step.done .step-icon {
+      background: #6be0a0;
+      border-color: #6be0a0;
+      color: #0a0a0f;
+    }
+
+    @keyframes pulse-ring {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(124,109,250,0.4); }
+      50%       { box-shadow: 0 0 0 6px rgba(124,109,250,0); }
+    }
+
+    /* Prompt */
+    #prompt-section {
+      display: none;
+      margin-top: 24px;
+      padding: 16px;
+      background: rgba(124, 109, 250, 0.08);
+      border: 1px solid rgba(124, 109, 250, 0.2);
+      border-radius: 10px;
+    }
+
+    #prompt-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    #prompt-text {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    /* Audio player */
+    #audio-section {
+      display: none;
+      margin-top: 24px;
+    }
+
+    #audio-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent2);
+      margin-bottom: 12px;
+    }
+
+    #audio-player {
+      width: 100%;
+      border-radius: 8px;
+      accent-color: var(--accent2);
+    }
+
+    #download-link {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--accent2);
+      text-decoration: none;
+    }
+
+    #download-link:hover { text-decoration: underline; }
+
+    /* Error */
+    #error-box {
+      display: none;
+      margin-top: 20px;
+      padding: 14px;
+      background: rgba(250, 80, 80, 0.1);
+      border: 1px solid rgba(250, 80, 80, 0.3);
+      border-radius: 10px;
+      color: #fa8080;
+      font-size: 0.88rem;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Lumen-Sonic</h1>
+    <p>Drop a light video. Get a matching music track.</p>
+  </header>
+
+  <div class="card">
+    <div id="drop-zone">
+      <input type="file" id="file-input" accept="video/*" />
+      <div class="drop-icon">🎬</div>
+      <div class="drop-label"><strong>Drop your video here</strong><br>or click to browse</div>
+      <div id="file-name"></div>
+    </div>
+
+    <button id="submit-btn" disabled>Generate Track</button>
+
+    <div id="error-box"></div>
+
+    <div id="status-section">
+      <hr class="divider" />
+      <div class="step" id="step-upload">
+        <div class="step-icon">1</div>
+        <span>Uploading video</span>
+      </div>
+      <div class="step" id="step-analyze">
+        <div class="step-icon">2</div>
+        <span>Analyzing light — vision model</span>
+      </div>
+      <div class="step" id="step-generate">
+        <div class="step-icon">3</div>
+        <span>Generating 30s track — Lyria</span>
+      </div>
+    </div>
+
+    <div id="prompt-section">
+      <h3>Music Prompt</h3>
+      <p id="prompt-text"></p>
+    </div>
+
+    <div id="audio-section">
+      <h3>Your Track</h3>
+      <audio id="audio-player" controls></audio>
+      <br />
+      <a id="download-link" download>⬇ Download WAV</a>
+    </div>
+  </div>
+
+  <script>
+    const dropZone    = document.getElementById('drop-zone');
+    const fileInput   = document.getElementById('file-input');
+    const fileName    = document.getElementById('file-name');
+    const submitBtn   = document.getElementById('submit-btn');
+    const statusSec   = document.getElementById('status-section');
+    const promptSec   = document.getElementById('prompt-section');
+    const promptText  = document.getElementById('prompt-text');
+    const audioSec    = document.getElementById('audio-section');
+    const audioPlayer = document.getElementById('audio-player');
+    const dlLink      = document.getElementById('download-link');
+    const errorBox    = document.getElementById('error-box');
+
+    let selectedFile = null;
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) setFile(f);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(f) {
+      selectedFile = f;
+      fileName.textContent = f.name;
+      dropZone.classList.add('has-file');
+      submitBtn.disabled = false;
+    }
+
+    function setStep(id, state) {
+      // state: 'active' | 'done' | ''
+      const el = document.getElementById(id);
+      el.classList.remove('active', 'done');
+      if (state) el.classList.add(state);
+      if (state === 'done') el.querySelector('.step-icon').textContent = '✓';
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      // Reset UI
+      errorBox.style.display = 'none';
+      promptSec.style.display = 'none';
+      audioSec.style.display = 'none';
+      ['step-upload','step-analyze','step-generate'].forEach(id => setStep(id, ''));
+      statusSec.style.display = 'block';
+      submitBtn.disabled = true;
+
+      // The backend does all three steps sequentially; we animate the steps
+      // on a rough timing basis while the single fetch is in flight.
+      setStep('step-upload', 'active');
+      const uploadTimer = setTimeout(() => {
+        setStep('step-upload', 'done');
+        setStep('step-analyze', 'active');
+      }, 5000);
+
+      const analyzeTimer = setTimeout(() => {
+        setStep('step-analyze', 'done');
+        setStep('step-generate', 'active');
+      }, 20000);
+
+      const formData = new FormData();
+      formData.append('video', selectedFile);
+
+      try {
+        const res = await fetch('/process', { method: 'POST', body: formData });
+
+        clearTimeout(uploadTimer);
+        clearTimeout(analyzeTimer);
+
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({ error: res.statusText }));
+          throw new Error(json.error || res.statusText);
+        }
+
+        // Mark all done
+        setStep('step-upload', 'done');
+        setStep('step-analyze', 'done');
+        setStep('step-generate', 'done');
+
+        // Show music prompt from header
+        const prompt = res.headers.get('X-Music-Prompt');
+        if (prompt) {
+          promptText.textContent = decodeURIComponent(prompt);
+          promptSec.style.display = 'block';
+        }
+
+        // Stream audio blob → player
+        const outFile = res.headers.get('X-Output-File') || 'track.wav';
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        audioPlayer.src = url;
+        dlLink.href = url;
+        dlLink.download = outFile.split('/').pop();
+        audioSec.style.display = 'block';
+        audioPlayer.play();
+
+      } catch (err) {
+        clearTimeout(uploadTimer);
+        clearTimeout(analyzeTimer);
+        errorBox.textContent = '⚠ ' + err.message;
+        errorBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
