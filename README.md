@@ -77,7 +77,7 @@ export GEMINI_API_KEY=your_key_here
 python3 app.py
 ```
 
-Open [http://localhost:5000](http://localhost:5000) in your browser.
+Open [http://localhost:5001](http://localhost:5001) in your browser.
 
 Both the **Upload Video** and **Live Camera** tabs work on desktop Chrome/Firefox.
 
@@ -101,13 +101,7 @@ Sign up at [ngrok.com](https://ngrok.com) (free), then:
 ngrok config add-authtoken <your-token>
 ```
 
-### 2. Issues I had with AirPlay Receiver (macOS only)
-
-AirPlay occupies port 5000 by default, so I deactivated it.
-
-**System Settings → General → AirDrop & Handoff → AirPlay Receiver → OFF**
-
-### 3. Start Flask
+### 2. Start Flask
 
 ```bash
 python3 app.py
@@ -116,7 +110,7 @@ python3 app.py
 ### 4. In a second terminal, open the tunnel
 
 ```bash
-ngrok http 5000
+ngrok http 5001
 ```
 
 ngrok prints a public URL like:
