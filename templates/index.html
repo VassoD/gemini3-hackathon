@@ -29,7 +29,7 @@
       padding: 48px 24px 80px;
     }
 
-    header { text-align: center; margin-bottom: 40px; }
+    header { text-align: center; margin-bottom: 32px; }
 
     header h1 {
       font-size: 2.4rem;
@@ -41,7 +41,65 @@
       background-clip: text;
     }
 
-    header p { color: var(--muted); margin-top: 8px; font-size: 0.95rem; }
+    header p { color: var(--muted); margin-top: 8px; font-size: 0.95rem; line-height: 1.5; max-width: 480px; margin-left: auto; margin-right: auto; }
+
+    /* How it works strip */
+    .how-it-works {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .how-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      flex: 1;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .how-step-icon { font-size: 1.6rem; }
+    .how-step-label { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+    .how-step-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+
+    .how-arrow {
+      color: var(--border);
+      font-size: 1.1rem;
+      padding: 0 4px;
+      flex-shrink: 0;
+      align-self: center;
+    }
+
+    @media (max-width: 480px) {
+      .how-arrow { display: none; }
+      .how-step { min-width: 120px; padding: 12px; }
+    }
+
+    /* Light source hint */
+    .light-hint {
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: rgba(240,160,64,0.07);
+      border: 1px solid rgba(240,160,64,0.2);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .light-hint strong { color: var(--accent2); }
 
     .card {
       width: 100%;
@@ -298,8 +356,28 @@
 <body>
   <header>
     <h1>Lumen-Sonic</h1>
-    <p>Point light at your camera. Get music back.</p>
+    <p>Your phone reads a light source — its color, warmth, and flicker — and turns it into an original 30-second piece of music.</p>
   </header>
+
+  <div class="how-it-works">
+    <div class="how-step">
+      <div class="how-step-icon">🔦</div>
+      <div class="how-step-label">Point at light</div>
+      <div class="how-step-desc">A candle, lamp, neon sign, sunlight — anything with character</div>
+    </div>
+    <div class="how-arrow">→</div>
+    <div class="how-step">
+      <div class="how-step-icon">🧠</div>
+      <div class="how-step-label">Gemini reads it</div>
+      <div class="how-step-desc">Color temperature, brightness, flicker rate translated into a music description</div>
+    </div>
+    <div class="how-arrow">→</div>
+    <div class="how-step">
+      <div class="how-step-icon">🎵</div>
+      <div class="how-step-label">Lyria composes</div>
+      <div class="how-step-desc">A unique 30-second track generated just for that light, that moment</div>
+    </div>
+  </div>
 
   <div class="card">
     <!-- Tabs -->
@@ -317,6 +395,9 @@
         <div id="file-name"></div>
       </div>
       <button class="primary-btn" id="upload-btn" disabled>Generate Track</button>
+      <div class="light-hint">
+        Upload any video that captures a light source — the model focuses on the light, not the scene
+      </div>
     </div>
 
     <!-- Camera panel -->
@@ -324,7 +405,7 @@
       <video id="camera-preview" autoplay muted playsinline></video>
       <video id="clip-preview" controls playsinline style="display:none;width:100%;border-radius:12px;margin-top:12px;"></video>
       <div class="camera-controls">
-        <button id="record-btn" disabled title="Tap to record">
+        <button id="record-btn" disabled title="Tap to start recording — tap again to stop">
           <div class="dot"></div>
         </button>
         <span id="countdown"></span>
@@ -332,6 +413,10 @@
       </div>
       <button class="primary-btn" id="record-again-btn" style="display:none;">🎬 Record Again</button>
       <p id="camera-status">Starting camera…</p>
+      <div class="light-hint">
+        <strong>Works best with:</strong> candles · neon signs · lamps · sunlight through a window · LED strips<br>
+        5–10 seconds is enough — tap to record, tap again to stop
+      </div>
     </div>
 
     <div id="error-box"></div>
