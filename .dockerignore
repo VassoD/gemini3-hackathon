@@ -1,0 +1,9 @@
+demo.mp4
+videos/
+music/
+*.mp4
+*.webm
+*.wav
+__pycache__/
+*.pyc
+.git/
